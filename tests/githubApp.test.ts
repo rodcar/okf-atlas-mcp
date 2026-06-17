@@ -42,7 +42,7 @@ describe("GitHub App auth", () => {
       privateKey
     });
 
-    await fs.rm(path.dirname(keyPath), { recursive: true, force: true });
+    await fs.rm(keyPath, { force: true });
   });
 
   it("fails clearly when GitHub App env is partially configured", async () => {

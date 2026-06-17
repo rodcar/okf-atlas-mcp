@@ -6,7 +6,7 @@ Thanks for your interest in improving `okf-atlas-mcp`.
 
 Requirements:
 
-- Node.js 20 or newer
+- Node.js 22.12.0 or newer
 - npm
 
 Install dependencies:

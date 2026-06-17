@@ -24,7 +24,7 @@ The server does not execute domain-specific queries. For example, the Bitcoin OK
 
 ## Requirements
 
-- Node.js 20 or newer
+- Node.js 22.12.0 or newer
 - npm
 - An MCP client such as Claude Desktop or Claude Code
 

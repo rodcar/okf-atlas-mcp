@@ -16,3 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MCP tools, resources, and prompt for listing, searching, reading, and validating OKF bundles.
 - In-memory graph API with lexical search, links, backlinks, tags, and types.
 - Vitest coverage for parsing, loading, graph behavior, MCP tools, and CLI parsing.
+
+### Changed
+
+- Dropped Node 20 support and raised the minimum runtime to Node 22.12.0 for Commander 15.
