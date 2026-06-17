@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import AdmZip from "adm-zip";
+import { getInstallationAccessToken, githubApiHeaders, loadGitHubAppConfigFromEnv } from "../auth/githubApp.js";
 
 export interface GitHubTreeUrlParts {
   owner: string;
@@ -70,6 +71,12 @@ export async function loadBundleFromGithubTreeUrl(url: string, cacheDir: string,
 }
 
 async function downloadArchive(parts: GitHubTreeUrlParts, archivePath: string): Promise<void> {
+  const githubAppConfig = await loadGitHubAppConfigFromEnv();
+  if (githubAppConfig) {
+    await downloadAuthenticatedArchive(parts, archivePath, githubAppConfig);
+    return;
+  }
+
   const branchPath = parts.branch.split("/").map(encodeURIComponent).join("/");
   const archiveUrl = `https://github.com/${parts.owner}/${parts.repo}/archive/refs/heads/${branchPath}.zip`;
   const response = await fetch(archiveUrl, {
@@ -78,6 +85,33 @@ async function downloadArchive(parts: GitHubTreeUrlParts, archivePath: string): 
     }
   });
 
+  if (!response.ok) {
+    throw new Error(`Failed to download GitHub archive (${response.status} ${response.statusText}): ${archiveUrl}`);
+  }
+
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  await fs.writeFile(archivePath, bytes);
+}
+
+async function downloadAuthenticatedArchive(
+  parts: GitHubTreeUrlParts,
+  archivePath: string,
+  githubAppConfig: NonNullable<Awaited<ReturnType<typeof loadGitHubAppConfigFromEnv>>>
+): Promise<void> {
+  const branchPath = parts.branch.split("/").map(encodeURIComponent).join("/");
+  const archiveUrl = `https://api.github.com/repos/${parts.owner}/${parts.repo}/zipball/${branchPath}`;
+  const token = await getInstallationAccessToken(parts, githubAppConfig);
+  const response = await fetch(archiveUrl, {
+    headers: githubApiHeaders(token),
+    redirect: "follow"
+  });
+
+  if (response.status === 403) {
+    throw new Error(`GitHub App installation lacks required repository Contents: Read-only permission: ${parts.owner}/${parts.repo}`);
+  }
+  if (response.status === 404) {
+    throw new Error(`GitHub repository, branch, or archive was not found: ${parts.owner}/${parts.repo}@${parts.branch}`);
+  }
   if (!response.ok) {
     throw new Error(`Failed to download GitHub archive (${response.status} ${response.statusText}): ${archiveUrl}`);
   }

@@ -138,6 +138,41 @@ Start with a preloaded bundle:
 
 If Claude Desktop cannot find `node`, replace `"command": "node"` with the absolute path from `which node`.
 
+### Private GitHub Repositories
+
+For private repositories, configure a GitHub App with read-only repository contents access and pass the app credentials to the MCP server environment. The user still provides normal GitHub tree URLs; credentials are never passed through MCP tool arguments.
+
+Claude Desktop example:
+
+```json
+{
+  "mcpServers": {
+    "okf-atlas-mcp": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/okf-atlas-mcp/dist/cli.js"
+      ],
+      "env": {
+        "GITHUB_APP_ID": "123456",
+        "GITHUB_APP_PRIVATE_KEY_PATH": "/secure/path/okf-atlas-mcp.private-key.pem"
+      }
+    }
+  }
+}
+```
+
+You can also use `GITHUB_APP_PRIVATE_KEY` for an inline PEM value. If using JSON config, encode newlines as `\n`.
+
+GitHub admin setup:
+
+1. Create a GitHub App.
+2. Grant repository permission `Contents: Read-only`.
+3. Install the app only on repositories that contain OKF bundles.
+4. Generate a private key for the app.
+5. Provide `GITHUB_APP_ID` and either `GITHUB_APP_PRIVATE_KEY_PATH` or `GITHUB_APP_PRIVATE_KEY` to the MCP server process.
+
+When these variables are present, `okf-atlas-mcp` auto-discovers the app installation for each requested repository and downloads through GitHub's API zipball endpoint. Public unauthenticated loading continues to work when the variables are absent.
+
 ## Runtime Bundle Loading
 
 Ask your MCP client to call:
@@ -225,6 +260,8 @@ npm pack --dry-run
 ## Security And Privacy
 
 `okf-atlas-mcp` downloads user-provided GitHub bundle URLs and stores archives in the configured local cache directory. Only load bundles from sources you trust.
+
+For private repositories, keep GitHub App credentials in environment variables or a secret manager. Do not paste tokens, private keys, or installation tokens into prompts or MCP tool arguments.
 
 The server does not send bundle contents to any service by itself. Your MCP client decides what context is sent to a model.
 
