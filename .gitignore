@@ -1,0 +1,6 @@
+node_modules/
+dist/
+coverage/
+.okf-cache/
+tests/.tmp/
+.DS_Store
