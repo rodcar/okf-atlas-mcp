@@ -113,6 +113,26 @@ describe("MCP server", () => {
     await fs.rm(cacheDir, { recursive: true, force: true });
   });
 
+  it("loads a repository root bundle from a Markdown link", async () => {
+    const cacheDir = path.resolve("tests/.tmp/server-root-cache");
+    await fs.rm(cacheDir, { recursive: true, force: true });
+    stubRootArchiveFetch("ai-engineering-okf-main");
+    const client = await createClientWithFixtures(new OkfBundleRegistry(), cacheDir);
+
+    const loaded = await client.callTool({
+      name: "okf_load_bundle",
+      arguments: {
+        bundle_url: "[rodcar/ai-engineering-okf](https://github.com/rodcar/ai-engineering-okf)"
+      }
+    });
+
+    expect((loaded.structuredContent as { bundle_id: string; source_url: string }).bundle_id).toBe("ai-engineering-okf");
+    expect((loaded.structuredContent as { source_url: string }).source_url).toBe(
+      "https://github.com/rodcar/ai-engineering-okf/tree/main"
+    );
+    await fs.rm(cacheDir, { recursive: true, force: true });
+  });
+
   it("exposes the navigation prompt with multi-bundle guidance", async () => {
     const client = await createClientWithFixtures();
     const prompt = await client.getPrompt({ name: "navigate_okf_bundle" });
@@ -164,5 +184,33 @@ function stubArchiveFetch(bundleRoot: string): void {
       statusText: "OK",
       arrayBuffer: async () => buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
     }))
+  );
+}
+
+function stubRootArchiveFetch(bundleRoot: string): void {
+  const zip = new AdmZip();
+  zip.addFile(`${bundleRoot}/index.md`, Buffer.from("# AI Engineering OKF"));
+  zip.addFile(
+    `${bundleRoot}/services/openai-api.md`,
+    Buffer.from("---\ntype: Service\ntitle: OpenAI API\ntags: [ai]\n---\n\nOpenAI service notes.")
+  );
+  const buffer = zip.toBuffer();
+
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        json: async () => ({ default_branch: "main" })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        arrayBuffer: async () => buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
+      })
   );
 }

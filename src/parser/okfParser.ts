@@ -7,6 +7,7 @@ import { extractMarkdownLinks } from "./markdownLinks.js";
 
 export interface ParseOkfBundleOptions {
   sourceUrl: string;
+  bundleId?: string;
 }
 
 export async function parseOkfBundle(bundlePath: string, options: ParseOkfBundleOptions): Promise<ParsedBundle> {
@@ -72,7 +73,7 @@ export async function parseOkfBundle(bundlePath: string, options: ParseOkfBundle
   }
 
   return {
-    bundle_id: bundleIdFromPath(absoluteBundlePath),
+    bundle_id: options.bundleId ?? bundleIdFromPath(absoluteBundlePath),
     source_url: options.sourceUrl,
     root_path: absoluteBundlePath,
     files,

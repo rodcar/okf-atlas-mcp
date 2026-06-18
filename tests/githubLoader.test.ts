@@ -5,7 +5,7 @@ import path from "node:path";
 import AdmZip from "adm-zip";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { clearGitHubAppTokenCache } from "../src/auth/githubApp.js";
-import { loadBundleFromGithubTreeUrl, parseGitHubTreeUrl } from "../src/loaders/githubLoader.js";
+import { loadBundleFromGithubUrl, loadBundleFromGithubTreeUrl, normalizeGitHubBundleUrl, parseGitHubTreeUrl } from "../src/loaders/githubLoader.js";
 
 const url = "https://github.com/owner/repo/tree/main/okf/bundles/sample";
 const privateKey = generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey.export({
@@ -26,6 +26,51 @@ describe("GitHub loader", () => {
       branch: "main",
       bundlePath: "okf/bundles/sample"
     });
+  });
+
+  it("normalizes raw repository root URLs", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ default_branch: "main" })));
+
+    await expect(normalizeGitHubBundleUrl("https://github.com/owner/repo")).resolves.toEqual({
+      owner: "owner",
+      repo: "repo",
+      branch: "main",
+      bundlePath: "",
+      canonicalUrl: "https://github.com/owner/repo/tree/main",
+      isRepositoryRoot: true
+    });
+  });
+
+  it("normalizes Markdown links wrapping repository root URLs", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ default_branch: "trunk" })));
+
+    await expect(normalizeGitHubBundleUrl("[owner/repo](https://github.com/owner/repo)")).resolves.toMatchObject({
+      owner: "owner",
+      repo: "repo",
+      branch: "trunk",
+      bundlePath: "",
+      canonicalUrl: "https://github.com/owner/repo/tree/trunk",
+      isRepositoryRoot: true
+    });
+  });
+
+  it("normalizes explicit GitHub tree root URLs", async () => {
+    await expect(normalizeGitHubBundleUrl("https://github.com/owner/repo/tree/main")).resolves.toEqual({
+      owner: "owner",
+      repo: "repo",
+      branch: "main",
+      bundlePath: "",
+      canonicalUrl: "https://github.com/owner/repo/tree/main",
+      isRepositoryRoot: true
+    });
+  });
+
+  it("rejects invalid Markdown or missing GitHub URLs", async () => {
+    await expect(normalizeGitHubBundleUrl("[owner/repo]")).rejects.toThrow("Expected bundle_url to be a GitHub URL");
+  });
+
+  it("rejects unsupported hosts", async () => {
+    await expect(normalizeGitHubBundleUrl("https://gitlab.com/owner/repo")).rejects.toThrow("Unsupported bundle URL host: gitlab.com");
   });
 
   it("reuses cached extraction when refresh is false", async () => {
@@ -62,6 +107,38 @@ describe("GitHub loader", () => {
 
     expect(result.endsWith(path.join("repo-main", "okf", "bundles", "sample"))).toBe(true);
     expect(fetch).toHaveBeenCalledOnce();
+    await fs.rm(cacheDir, { recursive: true, force: true });
+  });
+
+  it("downloads and extracts repository root bundles", async () => {
+    const cacheDir = path.resolve("tests/.tmp/cache-root-download");
+    await fs.rm(cacheDir, { recursive: true, force: true });
+    const zip = new AdmZip();
+    zip.addFile("repo-main/index.md", Buffer.from("# Root Bundle"));
+    const buffer = zip.toBuffer();
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(jsonResponse({ default_branch: "main" })).mockResolvedValueOnce(binaryResponse(buffer)));
+
+    const result = await loadBundleFromGithubUrl("https://github.com/owner/repo", cacheDir, false);
+
+    expect(result.reference).toMatchObject({
+      owner: "owner",
+      repo: "repo",
+      branch: "main",
+      bundlePath: "",
+      canonicalUrl: "https://github.com/owner/repo/tree/main",
+      isRepositoryRoot: true
+    });
+    expect(result.bundlePath.endsWith(path.join("repo-main"))).toBe(true);
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      "https://api.github.com/repos/owner/repo",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "user-agent": "okf-atlas-mcp"
+        })
+      })
+    );
     await fs.rm(cacheDir, { recursive: true, force: true });
   });
 

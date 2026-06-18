@@ -1,6 +1,6 @@
 import { buildGraph } from "../graph/builder.js";
 import { InMemoryOkfGraphApi } from "../graph/memoryGraph.js";
-import { loadBundleFromGithubTreeUrl, parseGitHubTreeUrl } from "../loaders/githubLoader.js";
+import { loadBundleFromGithubUrl } from "../loaders/githubLoader.js";
 import { parseOkfBundle } from "../parser/okfParser.js";
 import type { BundleRegistryEntry } from "./registry.js";
 
@@ -11,9 +11,11 @@ export interface LoadBundleFromUrlOptions {
 }
 
 export async function loadBundleFromUrl(options: LoadBundleFromUrlOptions): Promise<BundleRegistryEntry> {
-  parseGitHubTreeUrl(options.bundleUrl);
-  const bundlePath = await loadBundleFromGithubTreeUrl(options.bundleUrl, options.cacheDir, options.refresh ?? false);
-  const parsedBundle = await parseOkfBundle(bundlePath, { sourceUrl: options.bundleUrl });
+  const { bundlePath, reference } = await loadBundleFromGithubUrl(options.bundleUrl, options.cacheDir, options.refresh ?? false);
+  const parsedBundle = await parseOkfBundle(bundlePath, {
+    sourceUrl: reference.canonicalUrl,
+    bundleId: reference.isRepositoryRoot ? reference.repo : undefined
+  });
   const graph = buildGraph(parsedBundle);
   const api = new InMemoryOkfGraphApi(graph);
   const overview = api.getBundleOverview();
@@ -24,7 +26,7 @@ export async function loadBundleFromUrl(options: LoadBundleFromUrlOptions): Prom
 
   return {
     bundle_id: overview.bundle_id,
-    source_url: options.bundleUrl,
+    source_url: reference.canonicalUrl,
     api
   };
 }

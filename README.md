@@ -5,7 +5,7 @@
 
 `okf-atlas-mcp` is a TypeScript MCP server for navigating OKF knowledge bundles.
 
-It loads OKF bundles from GitHub tree URLs, parses Markdown concepts and YAML frontmatter, builds local in-memory graphs, and exposes MCP tools/resources so agents can inspect, search, and navigate the bundles without loading the entire knowledge base into context.
+It loads OKF bundles from GitHub URLs, parses Markdown concepts and YAML frontmatter, builds local in-memory graphs, and exposes MCP tools/resources so agents can inspect, search, and navigate the bundles without loading the entire knowledge base into context.
 
 ## Why
 
@@ -71,6 +71,18 @@ Start with one bundle:
 okf-atlas-mcp --bundle-url "https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf/bundles/crypto_bitcoin"
 ```
 
+If an OKF bundle is stored at the repository root, provide the repository URL instead:
+
+```bash
+okf-atlas-mcp --bundle-url "https://github.com/rodcar/ai-engineering-okf"
+```
+
+Markdown links are accepted too:
+
+```bash
+okf-atlas-mcp --bundle-url "[rodcar/ai-engineering-okf](https://github.com/rodcar/ai-engineering-okf)"
+```
+
 Start with multiple bundles:
 
 ```bash
@@ -90,7 +102,7 @@ okf-atlas-mcp \
   --server-name okf-atlas-mcp
 ```
 
-`--bundle-url` can be repeated and is optional. If omitted, use `okf_load_bundle` from the MCP client.
+`--bundle-url` can be repeated and is optional. If omitted, use `okf_load_bundle` from the MCP client. Repository root URLs load the root directory as the OKF bundle after resolving the repository default branch. Use `/tree/{branch}/{path}` URLs for bundles stored in subdirectories.
 
 ## Claude Desktop
 
@@ -140,7 +152,7 @@ If Claude Desktop cannot find `node`, replace `"command": "node"` with the absol
 
 ### Private GitHub Repositories
 
-For private repositories, configure a GitHub App with read-only repository contents access and pass the app credentials to the MCP server environment. The user still provides normal GitHub tree URLs; credentials are never passed through MCP tool arguments.
+For private repositories, configure a GitHub App with read-only repository contents access and pass the app credentials to the MCP server environment. The user still provides normal GitHub URLs; credentials are never passed through MCP tool arguments.
 
 Claude Desktop example:
 
@@ -179,7 +191,7 @@ Ask your MCP client to call:
 
 ```json
 {
-  "bundle_url": "https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf/bundles/crypto_bitcoin",
+  "bundle_url": "[rodcar/ai-engineering-okf](https://github.com/rodcar/ai-engineering-okf)",
   "refresh": false
 }
 ```

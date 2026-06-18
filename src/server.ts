@@ -86,9 +86,9 @@ export function createOkfMcpServer(registry: OkfBundleRegistry, options: CreateO
     "okf_load_bundle",
     {
       title: "OKF Load Bundle",
-      description: "Load an OKF bundle from a supported GitHub tree URL for this server session.",
+      description: "Load an OKF bundle from a supported GitHub URL or Markdown link for this server session.",
       inputSchema: {
-        bundle_url: z.string().url(),
+        bundle_url: z.string(),
         refresh: z.boolean().default(false)
       }
     },
