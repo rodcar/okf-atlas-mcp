@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "adm-zip": "^0.5.16",
+    "adm-zip": "^0.5.18",
     "commander": "^15.0.0",
     "markdown-it": "^14.1.0",
     "yaml": "^2.8.2",
